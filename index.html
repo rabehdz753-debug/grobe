@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة إرسال البيانات المباشرة للمجموعة</title>
+    <!-- خط وطني مريح للعين وأيقونات تفاعلية احترافية -->
+    <link href="https://googleapis.com" rel="stylesheet">
+    <link rel="stylesheet" href="https://cloudflare.com">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .app-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 480px;
+            padding: 35px 30px;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+        .header { text-align: center; margin-bottom: 25px; }
+        .header i { font-size: 40px; color: #2a5298; margin-bottom: 10px; }
+        .header h2 { color: #333; font-size: 24px; font-weight: 700; }
+        .header p { color: #666; font-size: 14px; margin-top: 5px; }
+        
+        .form-group { margin-bottom: 20px; position: relative; }
+        .form-group label { display: block; color: #444; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+        .form-group i { position: absolute; right: 15px; top: 43px; color: #999; }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 12px;
+            font-size: 15px;
+            color: #333;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus { border-color: #2a5298; box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1); }
+        textarea.form-control { resize: none; }
+        
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            transition: opacity 0.3s;
+        }
+        .btn-submit:hover { opacity: 0.9; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+
+        .status-msg {
+            display: none;
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .status-msg.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-msg.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+<div class="app-card">
+    <div class="header">
+        <i class="fa-solid fa-users-rectangle"></i>
+        <h2>مشاركة المعلومات السريعة</h2>
+        <p>متاح للجميع مباشرة بدون الحاجة لتسجيل دخول</p>
+    </div>
+
+    <!-- فورم إدخال البيانات التقليدي -->
+    <form id="public-group-form">
+        <div class="form-group">
+            <label for="name">الاسم الكامل للمستخدم:</label>
+            <i class="fa-regular fa-user"></i>
+            <input type="text" id="name" class="form-control" placeholder="اكتب اسمك هنا" required>
+        </div>
+
+        <div class="form-group">
+            <label for="contact">رقم الهاتف أو وسيلة التواصل:</label>
+            <i class="fa-regular fa-envelope"></i>
+            <input type="text" id="contact" class="form-control" placeholder="كيف يمكننا الاتصال بك؟" required>
+        </div>
+
+        <div class="form-group">
+            <label for="message">المعلومات المراد رفعها للمجموعة:</label>
+            <i class="fa-regular fa-comment-dots" style="top: 45px;"></i>
+            <textarea id="message" rows="4" class="form-control" placeholder="اكتب تفاصيل معلوماتك هنا..." required></textarea>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn-submit">
+            <span>إرسال فوري للمجموعة</span>
+            <i class="fa-solid fa-paper-plane"></i>
+        </button>
+
+        <div id="status-box" class="status-msg"></div>
+    </form>
+</div>
+
+<script>
+    /* 
+      ⚠️ إعدادات الربط البرمجي السري للتوصيل بالمجموعة:
+      قم باستبدال القيم الافتراضية بالقيم الحقيقية الخاصة بالبوت والمجموعة ليشتغل النظام فوراً
+    */
+    const TELEGRAM_TOKEN = "ضع_هنا_توكن_البوت_الخاص_بكم"; 
+    const TELEGRAM_GROUP_CHAT_ID = "ضع_هنا_معرف_المجموعة_بالسالب"; 
+
+    const form = document.getElementById("public-group-form");
+    const submitBtn = document.getElementById("submit-btn");
+    const statusBox = document.getElementById("status-box");
+
+    form.addEventListener("submit", async function(event) {
+        event.preventDefault(); // منع الصفحة من التحديث وضياع البيانات
+        
+        // تغيير حالة الزر لمنع الضغط المتكرر أثناء عملية المعالجة
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>جاري التوصيل للمجموعة...</span> <i class="fa-solid fa-spinner fa-spin"></i>';
+        statusBox.style.display = "none";
+
+        const name = document.getElementById("name").value;
+        const contact = document.getElementById("contact").value;
+        const message = document.getElementById("message").value;
+
+        // صياغة الرسالة البرمجية الموجهة للمجموعة المشتركة
+        const textMessage = `🚨 *تنبيه: مستخدم عشوائي أرسل بيانات جديدة*\n\n` +
+                            `👤 *الاسم:* ${name}\n` +
+                            `📞 *الاتصال:* ${contact}\n` +
+                            `📝 *المعلومات المرفوعة:* ${message}`;
+
+        // الرابط المباشر لواجهة برمجة تليجرام الآمنة (API)
+        const url = `https://telegram.org{TELEGRAM_TOKEN}/sendMessage`;
+
+        try {
+            // إرسال طلب Fetch API في الخلفية بدون قيود حسابات جوجل
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_GROUP_CHAT_ID,
+                    text: textMessage,
+                    parse_mode: "Markdown"
+                })
+            });
+
+            if (response.ok) {
+                // إظهار إشعار نجاح مبهج للمستخدم الثالث
+                statusBox.className = "status-msg success";
+                statusBox.innerHTML = '<i class="fa-regular fa-circle-check"></i> تم إرسال معلوماتك بنجاح، وظهر الإشعار في مجموعة المسؤولين!';
+                statusBox.style.display = "block";
+                form.reset(); // تصفير الخانات
+            } else {
+                throw new Error("خطأ في معالجة الخادم");
+            }
+        } catch (error) {
+            // معالجة الأخطاء في حال وجود مشكلة بالتوكن أو معرف المجموعة
+            statusBox.className = "status-msg error";
+            statusBox.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> فشل الإرسال، تأكد من صحة إعدادات التوكن ومعرف المجموعة.';
+            statusBox.style.display = "block";
+        } finally {
+            // إعادة الزر لوضعه الطبيعي بعد الانتهاء
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>إرسال فوري للمجموعة</span> <i class="fa-solid fa-paper-plane"></i>';
+        }
+    });
+</script>
+
+</body>
+</html>
